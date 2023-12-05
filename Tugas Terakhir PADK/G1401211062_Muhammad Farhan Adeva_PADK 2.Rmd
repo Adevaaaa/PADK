@@ -1,0 +1,132 @@
+---
+title: "TUGAS PADK"
+author: "Muhammad Farhan Adeva G1401211062"
+date: "2023-12-05"
+output:
+   html_document:
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: false
+---
+
+### Library
+
+```{r}
+library(readxl)
+library(pscl)
+library(car)
+library(rcompanion)
+library(rms)
+library(lmtest)
+```
+
+# Input data
+
+data yang digunakan ialah :
+$y = event$ 
+$x1 = age$ 
+$x2 = gender$ 
+$x3 = Profesi$
+
+
+```{r}
+datapadk <- read_excel("C:/Users/DELL/Documents/KULIAH/Semester 5/MPDW/TA/Referensi Fix/Data tugas 2 sesi UAS.xlsx")
+
+## Peubah yang digunakan (y = event, x1 = age, x2 = gender, x3 = industry)
+## jadikan peubah gender dan industry menjadi factor
+datapadk$event <- as.factor(datapadk$event)
+datapadk$gender <- as.factor(datapadk$gender)
+datapadk$industry <- as.factor(datapadk$industry)
+datapadk$way <- as.factor(datapadk$way)
+datapadk$profession <- as.factor(datapadk$profession)
+head(datapadk)
+```
+
+# Pembuatan model regresi logistik berganda
+
+```{r}
+model1 <- glm(event~age+gender+profession, data = datapadk, family = binomial(link = 'logit'))
+summary(model1)
+```
+
+## Dugaan Peluang beberapa peubah untuk umur 35 tahun
+
+```{r}
+MB <- 1.395-0.013*35
+MA <- 0.7032-0.013*35
+FB <- 1.604-0.013*35
+FA <- 0.912-0.013*35
+MB <- exp(MB)/(1+exp(MB))
+MA <- exp(MA)/(1+exp(MA))
+FB <- exp(FB)/(1+exp(FB))
+FA <- exp(FA)/(1+exp(FA))
+Dugaan_Peluang <- data.frame( "Kategori" =c("Male Engineer","Male Accounting","Female Engineer","Female Accounting"),"Dugaan" = c(MB,MA,FB,FA))
+Dugaan_Peluang
+```
+
+## odds ratio perbandingan beberapa peubah dan peubah yang lain tetap
+
+```{r}
+MvsF <- exp(-0.2088)
+BvsA <- exp(0.692)
+odds_ratio <- data.frame( "Kategori" =c("Male vs Female","Engineer vs Accounting"),"Odds ratio" = c(MvsF,BvsA))
+odds_ratio
+```
+
+# UJI Diagnostik
+
+## Multikolinieritas
+
+```{r}
+vif(model1)
+```
+
+
+## Uji Simultan
+
+```{r}
+anova(model1, test="LRT")
+# Tolak H0
+```
+
+## UJI Wald
+
+```{r}
+Anova(model1, test="Wald")
+# Tolak H0
+```
+
+# Seleksi model
+
+## Forward
+
+```{r}
+model_forward <- step(model1, direction = "forward")
+summary(model_forward)
+```
+
+## Backward
+
+```{r}
+model_backward <- step(model1, direction = "backward")
+summary(model_backward)
+```
+
+## Perbandingan model stepwise berdasarkan AIC
+
+```{r}
+aic_model <- data.frame( "Metode Stepwise" =c("Model awal","Forward","Backward"),"AIC" = c(model1$aic,model_forward$aic,model_backward$aic))
+dplyr::arrange(.data=aic_model, AIC)
+```
+
+# Uji kelayakan model
+
+## Uji hosmer Lemeshow
+
+```{r}
+library(generalhoslem)
+logitgof(datapadk$event,fitted(model_forward))
+#Terima H0
+```
+
